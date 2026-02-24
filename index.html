@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REDA V2 — Bequall Operations Engine</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232733;
+  --border: #2d3244;
+  --text: #e4e6ed;
+  --text2: #8b8fa3;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,.12);
+  --yellow: #eab308;
+  --yellow-bg: rgba(234,179,8,.12);
+  --orange: #f97316;
+  --orange-bg: rgba(249,115,22,.12);
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --blue-bg: rgba(59,130,246,.12);
+  --purple: #a855f7;
+  --sidebar-w: 220px;
+  --topbar-h: 56px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); overflow:hidden; height:100vh; }
+a { color:var(--accent2); text-decoration:none; }
+
+/* Layout */
+.app { display:flex; height:100vh; }
+.sidebar { width:var(--sidebar-w); background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar { height:var(--topbar-h); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; gap:16px; flex-shrink:0; }
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* Sidebar */
+.logo { padding:20px 16px 16px; font-size:18px; font-weight:700; letter-spacing:-.5px; color:var(--text); display:flex; align-items:center; gap:8px; }
+.logo span { color:var(--accent2); font-size:12px; font-weight:500; background:var(--accent); background:rgba(99,102,241,.2); padding:2px 8px; border-radius:10px; }
+.nav { flex:1; padding:8px; }
+.nav-item { padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px; color:var(--text2); display:flex; align-items:center; gap:10px; transition:all .15s; }
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:rgba(99,102,241,.15); color:var(--accent2); font-weight:600; }
+.nav-item .badge { background:var(--accent); color:#fff; font-size:11px; padding:1px 6px; border-radius:8px; margin-left:auto; }
+.nav-section { padding:8px 12px 4px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--text2); margin-top:8px; }
+.sidebar-footer { padding:16px; border-top:1px solid var(--border); font-size:12px; color:var(--text2); }
+
+/* Topbar */
+.search { flex:1; max-width:480px; }
+.search input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 12px 8px 36px; color:var(--text); font-size:14px; outline:none; }
+.search input:focus { border-color:var(--accent); }
+.search { position:relative; }
+.search::before { content:'⌕'; position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text2); font-size:16px; }
+.topbar-right { display:flex; align-items:center; gap:12px; margin-left:auto; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); }
+.topbar-user { font-size:13px; color:var(--text2); }
+
+/* Metrics bar */
+.metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
+.metric-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.metric-label { font-size:12px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px; }
+.metric-value { font-size:28px; font-weight:700; }
+.metric-sub { font-size:12px; color:var(--text2); margin-top:4px; }
+.metric-value.green { color:var(--green); }
+.metric-value.blue { color:var(--blue); }
+.metric-value.purple { color:var(--purple); }
+.metric-value.accent { color:var(--accent2); }
+
+/* Three-column engine view */
+.engines { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:24px; }
+.engine { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.engine-header { padding:16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.engine-title { font-size:15px; font-weight:700; }
+.engine-badge { font-size:11px; padding:3px 10px; border-radius:12px; font-weight:600; }
+.engine-body { padding:0; max-height:500px; overflow-y:auto; }
+
+/* Funnel stages */
+.stage { border-bottom:1px solid var(--border); padding:12px 16px; cursor:pointer; transition:background .1s; }
+.stage:last-child { border-bottom:none; }
+.stage:hover { background:var(--surface2); }
+.stage-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.stage-name { font-size:13px; font-weight:600; }
+.stage-count { font-size:13px; font-weight:700; color:var(--accent2); }
+.stage-bar { height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+.stage-fill { height:100%; border-radius:2px; transition:width .5s; }
+
+/* Account pills */
+.account-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.pill { font-size:11px; padding:3px 8px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.pill:hover { border-color:var(--accent); background:rgba(99,102,241,.1); }
+.pill.tier1 { border-color:rgba(99,102,241,.4); background:rgba(99,102,241,.08); }
+.pill.alert { border-color:rgba(234,179,8,.4); background:var(--yellow-bg); }
+.pill.hot { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.08); color:#fca5a5; }
+
+/* Ticket queue */
+.tickets { margin-bottom:24px; }
+.ticket { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all .15s; }
+.ticket:hover { border-color:var(--accent); }
+.ticket-priority { width:6px; height:32px; border-radius:3px; flex-shrink:0; }
+.ticket-priority.p0 { background:var(--red); }
+.ticket-priority.p1 { background:var(--orange); }
+.ticket-priority.p2 { background:var(--yellow); }
+.ticket-body { flex:1; }
+.ticket-title { font-size:13px; font-weight:600; }
+.ticket-meta { font-size:12px; color:var(--text2); margin-top:2px; }
+.ticket-assignee { font-size:12px; padding:3px 8px; border-radius:6px; background:var(--surface2); }
+
+/* Section headers */
+.section-header { font-size:14px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.section-header .count { color:var(--text2); font-weight:400; }
+
+/* Account detail panel */
+.detail-overlay { position:fixed; top:0; right:0; bottom:0; width:520px; background:var(--surface); border-left:1px solid var(--border); z-index:100; transform:translateX(100%); transition:transform .25s ease; overflow-y:auto; }
+.detail-overlay.open { transform:translateX(0); }
+.detail-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; position:sticky; top:0; background:var(--surface); z-index:1; }
+.detail-close { cursor:pointer; font-size:20px; color:var(--text2); padding:4px; }
+.detail-close:hover { color:var(--text); }
+.detail-body { padding:24px; }
+.detail-name { font-size:20px; font-weight:700; }
+.detail-type { font-size:13px; color:var(--text2); margin-top:2px; }
+.detail-tags { display:flex; gap:6px; margin-top:8px; }
+.tag { font-size:11px; padding:3px 10px; border-radius:6px; font-weight:600; }
+.tag.tier1 { background:rgba(99,102,241,.15); color:var(--accent2); }
+.tag.tier2 { background:rgba(59,130,246,.15); color:var(--blue); }
+.tag.hot { background:rgba(239,68,68,.12); color:#fca5a5; }
+.tag.green { background:var(--green-bg); color:var(--green); }
+.tag.yellow { background:var(--yellow-bg); color:var(--yellow); }
+
+.detail-section { margin-bottom:20px; }
+.detail-section-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--text2); margin-bottom:8px; }
+.detail-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.detail-row:last-child { border:none; }
+.detail-row .label { color:var(--text2); }
+.detail-row .value { font-weight:500; }
+
+.detail-contacts { margin-top:8px; }
+.contact-card { padding:10px 12px; background:var(--surface2); border-radius:8px; margin-bottom:6px; }
+.contact-name { font-size:13px; font-weight:600; }
+.contact-title { font-size:12px; color:var(--text2); }
+.contact-email { font-size:12px; color:var(--accent2); margin-top:2px; }
+
+.detail-signals { margin-top:8px; }
+.signal-item { padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.signal-item:last-child { border:none; }
+.signal-type { display:inline-block; font-size:11px; padding:2px 6px; border-radius:4px; background:var(--blue-bg); color:var(--blue); margin-right:6px; }
+.signal-date { color:var(--text2); font-size:12px; float:right; }
+
+/* Score bar */
+.score-bar { display:flex; align-items:center; gap:8px; margin:8px 0; }
+.score-track { flex:1; height:8px; background:var(--surface2); border-radius:4px; overflow:hidden; }
+.score-fill { height:100%; border-radius:4px; }
+.score-num { font-size:14px; font-weight:700; min-width:32px; }
+
+/* Action buttons */
+.actions { display:flex; gap:8px; margin-top:16px; }
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text); transition:all .15s; }
+.btn:hover { border-color:var(--accent); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn.primary:hover { background:var(--accent2); }
+
+/* Slack terminal */
+.terminal { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:24px; overflow:hidden; }
+.terminal-header { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+.terminal-body { padding:16px; font-family:'SF Mono', 'Fira Code', monospace; font-size:13px; line-height:1.6; max-height:300px; overflow-y:auto; }
+.terminal-input { display:flex; border-top:1px solid var(--border); }
+.terminal-input input { flex:1; background:transparent; border:none; padding:12px 16px; color:var(--text); font-family:'SF Mono', 'Fira Code', monospace; font-size:13px; outline:none; }
+.terminal-input .prompt { padding:12px 0 12px 16px; color:var(--accent2); font-family:'SF Mono', 'Fira Code', monospace; font-size:13px; }
+.cmd-output { margin:8px 0; }
+.cmd-line { color:var(--accent2); }
+.cmd-result { color:var(--text); white-space:pre-wrap; }
+.cmd-dim { color:var(--text2); }
+
+/* Page transitions */
+.page { display:none; }
+.page.active { display:block; }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border); }
+.tab { padding:10px 16px; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; border-bottom:2px solid transparent; transition:all .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--accent2); border-color:var(--accent); font-weight:600; }
+
+/* Pipeline kanban */
+.kanban { display:flex; gap:12px; overflow-x:auto; padding-bottom:12px; }
+.kanban-col { min-width:220px; max-width:260px; background:var(--surface); border:1px solid var(--border); border-radius:10px; flex-shrink:0; }
+.kanban-col-header { padding:12px; border-bottom:1px solid var(--border); font-size:13px; font-weight:600; display:flex; justify-content:space-between; }
+.kanban-col-count { color:var(--accent2); }
+.kanban-col-body { padding:8px; min-height:80px; }
+.kanban-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:6px; cursor:pointer; transition:all .15s; }
+.kanban-card:hover { border-color:var(--accent); }
+.kanban-card-name { font-size:13px; font-weight:600; }
+.kanban-card-meta { font-size:11px; color:var(--text2); margin-top:4px; }
+.kanban-card-score { float:right; font-size:11px; font-weight:700; color:var(--accent2); }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .engines { grid-template-columns:1fr; }
+  .sidebar { width:60px; }
+  .nav-item span, .logo div, .nav-section, .sidebar-footer { display:none; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text2); }
+
+/* Animations */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.animate-in { animation: fadeIn .3s ease; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">
+      <div>REDA<span>V2</span></div>
+    </div>
+    <div class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <span>📊</span><span>Dashboard</span>
+      </div>
+      <div class="nav-section">Engines</div>
+      <div class="nav-item" onclick="showPage('marketing')">
+        <span>🎯</span><span>Marketing</span>
+        <span class="badge">47</span>
+      </div>
+      <div class="nav-item" onclick="showPage('sales')">
+        <span>💼</span><span>Sales</span>
+        <span class="badge">22</span>
+      </div>
+      <div class="nav-item" onclick="showPage('ops')">
+        <span>🔧</span><span>Operations</span>
+        <span class="badge">7</span>
+      </div>
+      <div class="nav-section">Data</div>
+      <div class="nav-item" onclick="showPage('accounts')">
+        <span>👥</span><span>Accounts</span>
+        <span class="badge">341</span>
+      </div>
+      <div class="nav-item" onclick="showPage('signals')">
+        <span>📡</span><span>Signals</span>
+        <span class="badge">18</span>
+      </div>
+      <div class="nav-item" onclick="showPage('tickets')">
+        <span>📋</span><span>Tickets</span>
+        <span class="badge" style="background:var(--orange)">8</span>
+      </div>
+      <div class="nav-section">System</div>
+      <div class="nav-item" onclick="showPage('terminal')">
+        <span>⌨️</span><span>REDA Terminal</span>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      REDA V2 · Build 2026.02.24<br>
+      <span style="color:var(--green)">●</span> All systems operational
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="search">
+        <input type="text" placeholder="Search accounts, contacts, signals..." id="globalSearch" oninput="handleSearch(this.value)">
+      </div>
+      <div class="topbar-right">
+        <div class="status-dot"></div>
+        <span class="topbar-user">DAO · Bequall Operations</span>
+      </div>
+    </div>
+
+    <div class="content" id="mainContent">
+      <!-- Dashboard Page -->
+      <div class="page active" id="page-dashboard">
+        <!-- Metrics -->
+        <div class="metrics animate-in">
+          <div class="metric-card">
+            <div class="metric-label">Market Universe</div>
+            <div class="metric-value">341</div>
+            <div class="metric-sub">+13 new signals tonight</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Tier 1 Accounts</div>
+            <div class="metric-value accent">22</div>
+            <div class="metric-sub">19 actionable, 3 need enrichment</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Active Sequences</div>
+            <div class="metric-value blue">3</div>
+            <div class="metric-sub">78 contacts enrolled</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Pipeline Value</div>
+            <div class="metric-value green">$185K</div>
+            <div class="metric-sub">3 meetings this week</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Email Verified Rate</div>
+            <div class="metric-value purple">11.3%</div>
+            <div class="metric-sub">Target: 23%+ by end of week</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Signal-to-Touch</div>
+            <div class="metric-value">72h</div>
+            <div class="metric-sub">Avg time from signal to first touch</div>
+          </div>
+        </div>
+
+        <!-- Ticket Queue -->
+        <div class="section-header">Action Queue <span class="count">· 8 items</span></div>
+        <div class="tickets animate-in" id="ticketQueue"></div>
+
+        <!-- Three Engine View -->
+        <div class="section-header" style="margin-top:24px">Engine Status</div>
+        <div class="engines animate-in">
+          <!-- Marketing Engine -->
+          <div class="engine">
+            <div class="engine-header">
+              <span class="engine-title">Marketing Engine</span>
+              <span class="engine-badge" style="background:var(--green-bg);color:var(--green)">Active</span>
+            </div>
+            <div class="engine-body" id="marketingFunnel"></div>
+          </div>
+
+          <!-- Sales Engine -->
+          <div class="engine">
+            <div class="engine-header">
+              <span class="engine-title">Sales Engine</span>
+              <span class="engine-badge" style="background:var(--blue-bg);color:var(--blue)">22 deals</span>
+            </div>
+            <div class="engine-body" id="salesFunnel"></div>
+          </div>
+
+          <!-- Operations Engine -->
+          <div class="engine">
+            <div class="engine-header">
+              <span class="engine-title">Operations Engine</span>
+              <span class="engine-badge" style="background:var(--purple);background:rgba(168,85,247,.15);color:var(--purple)">7 projects</span>
+            </div>
+            <div class="engine-body" id="opsFunnel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketing Page -->
+      <div class="page" id="page-marketing">
+        <div class="section-header">Marketing Engine — Prospect Funnel</div>
+        <div class="metrics animate-in">
+          <div class="metric-card"><div class="metric-label">Signals This Week</div><div class="metric-value">47</div><div class="metric-sub">+12 vs last week</div></div>
+          <div class="metric-card"><div class="metric-label">Entities Resolved</div><div class="metric-value green">41</div><div class="metric-sub">87% resolution rate</div></div>
+          <div class="metric-card"><div class="metric-label">Enriched (Stage 3+)</div><div class="metric-value blue">28</div></div>
+          <div class="metric-card"><div class="metric-label">ICP Qualified</div><div class="metric-value accent">19</div></div>
+          <div class="metric-card"><div class="metric-label">Sequenced</div><div class="metric-value">78</div><div class="metric-sub">22% engaged</div></div>
+        </div>
+        <div class="section-header" style="margin-top:24px">Signal Sources — Performance</div>
+        <div id="signalSources" class="animate-in"></div>
+        <div class="section-header" style="margin-top:24px">Enrichment Pipeline</div>
+        <div id="enrichmentPipeline" class="animate-in"></div>
+      </div>
+
+      <!-- Sales Page -->
+      <div class="page" id="page-sales">
+        <div class="section-header">Sales Engine — 14-Stage Pipeline</div>
+        <div class="tabs">
+          <div class="tab active" onclick="showSalesView('kanban',this)">Kanban</div>
+          <div class="tab" onclick="showSalesView('list',this)">List</div>
+          <div class="tab" onclick="showSalesView('velocity',this)">Velocity</div>
+        </div>
+        <div id="salesContent"></div>
+      </div>
+
+      <!-- Operations Page -->
+      <div class="page" id="page-ops">
+        <div class="section-header">Operations Engine — Active Projects</div>
+        <div id="opsContent" class="animate-in"></div>
+      </div>
+
+      <!-- Accounts Page -->
+      <div class="page" id="page-accounts">
+        <div class="section-header">Account Universe <span class="count">· 341 accounts</span></div>
+        <div class="tabs">
+          <div class="tab active" onclick="filterAccounts('all',this)">All (341)</div>
+          <div class="tab" onclick="filterAccounts('tier1',this)">Tier 1 (22)</div>
+          <div class="tab" onclick="filterAccounts('tier2',this)">Tier 2 (47)</div>
+          <div class="tab" onclick="filterAccounts('new',this)">New Signals (13)</div>
+        </div>
+        <div id="accountList" class="animate-in"></div>
+      </div>
+
+      <!-- Signals Page -->
+      <div class="page" id="page-signals">
+        <div class="section-header">Signal Feed <span class="count">· Last 7 days</span></div>
+        <div id="signalFeed" class="animate-in"></div>
+      </div>
+
+      <!-- Tickets Page -->
+      <div class="page" id="page-tickets">
+        <div class="section-header">Ticket Queue <span class="count">· 8 open</span></div>
+        <div id="ticketFull" class="animate-in"></div>
+      </div>
+
+      <!-- Terminal Page -->
+      <div class="page" id="page-terminal">
+        <div class="section-header">REDA Terminal</div>
+        <div class="terminal animate-in">
+          <div class="terminal-header">⌨️ /reda command interface</div>
+          <div class="terminal-body" id="terminalBody">
+            <div class="cmd-dim">REDA V2 Operations Engine — Bequall</div>
+            <div class="cmd-dim">Type /reda help for available commands</div>
+            <div class="cmd-dim">──────────────────────────────────</div>
+          </div>
+          <div class="terminal-input">
+            <span class="prompt">/reda</span>
+            <input type="text" id="termInput" placeholder="Type a command..." onkeydown="if(event.key==='Enter')runCommand(this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Detail Panel -->
+  <div class="detail-overlay" id="detailPanel">
+    <div class="detail-header">
+      <div>
+        <div class="detail-name" id="detailName"></div>
+        <div class="detail-type" id="detailType"></div>
+        <div class="detail-tags" id="detailTags"></div>
+      </div>
+      <div class="detail-close" onclick="closeDetail()">✕</div>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// REDA V2 — Data Layer
+// ═══════════════════════════════════════════
+
+const TIER1_ACCOUNTS = [
+  { id:1, name:"Mutual Housing California", type:"Nonprofit", market:"Sacramento", icp:92, tier:1, urgency:"immediate", enrichment:"intel_complete", units:241, signal:"Confirmed modular adopter (SacBiz Journal Jun 2025)", hot:true, route:"B", contacts:[{name:"Rachel Iskow",title:"CEO/Executive Director",email:"(verify)"}], projects:[{name:"San Juan Apartments",units:113,status:"Under construction"},{name:"Sakura",units:134,status:"Broke ground Nov 2025"},{name:"R Street corridor",units:0,status:"Planning"}] },
+  { id:2, name:"Mercy Housing California", type:"Nonprofit", market:"Bay Area, Sacramento", icp:90, tier:1, urgency:"immediate", enrichment:"contacts_verified", units:222, signal:"$152.7M West Senior Building SF — $1M+/door", route:"B", contacts:[{name:"(Regional VP CA)",title:"VP, Mercy Housing CA",email:"(3 emails in data)"}], projects:[{name:"West Senior Building",units:151,status:"Under construction, $152.7M"},{name:"El Dorado Haven",units:65,status:"Broke ground Mar 2025"}] },
+  { id:3, name:"J.F. Shea Co.", type:"Private", market:"Bay Area", icp:90, tier:1, urgency:"near_term", enrichment:"execs_found", units:90, signal:"Bay Area luxury MF starting construction after 5-year entitlement", route:"B", contacts:[{name:"Bert Selva",title:"CEO, Shea Homes",email:"(verify)"}], projects:[{name:"Bay Area luxury MF",units:0,status:"Construction starting 2025"}] },
+  { id:4, name:"Eden Housing", type:"Nonprofit", market:"Bay Area, Sacramento", icp:88, tier:1, urgency:"immediate", enrichment:"intel_complete", units:1887, signal:"$78M+ state funding, 5 projects. $576K/door Sacramento.", route:"B", contacts:[{name:"Andrea Osgood",title:"VP Real Estate Development",email:"(5 emails in data)"}], projects:[{name:"Oak Park Sacramento",units:67,status:"Under construction"},{name:"Marin project",units:0,status:"Breaking ground Q2 2026"},{name:"Bishop Ranch affordable",units:0,status:"Approved Oct 2025"}] },
+  { id:5, name:"DM Development", type:"Private", market:"Bay Area", icp:88, tier:1, urgency:"near_term", enrichment:"intel_complete", units:425, signal:"Pivoted 425-unit 300 DeHaro from market-rate to 100% affordable", route:"B", contacts:[{name:"Mark MacDonald",title:"Principal",email:"info@dm-dev.com"}], projects:[{name:"300 DeHaro Street",units:425,status:"Under construction, $204M"}] },
+  { id:6, name:"KB Home", type:"Public", market:"Bay Area", icp:88, tier:1, urgency:"near_term", enrichment:"execs_found", units:88, signal:"Daly City community announced 2026. Built to Order model.", route:"B", contacts:[], projects:[{name:"Daly City",units:0,status:"Announced 2026"},{name:"The Chapter",units:0,status:"Active sales"}] },
+  { id:7, name:"The Sobrato Organization", type:"Private", market:"Bay Area", icp:88, tier:1, urgency:"immediate", enrichment:"execs_found", units:88, signal:"$100M BAHIF fund (w/ Apple). $750K/unit target.", route:"B", contacts:[{name:"John Michael Sobrato",title:"CEO",email:"(verify)"}], projects:[{name:"1633 Valencia SF",units:0,status:"Nearing completion"},{name:"Harvey West Studios",units:0,status:"Completion 2026"}] },
+  { id:8, name:"Sunset Development", type:"Private", market:"East Bay", icp:88, tier:1, urgency:"near_term", enrichment:"execs_found", units:88, signal:"Bishop Ranch residential expansion: 1,000+ units multi-phase", route:"B", contacts:[{name:"Alexander Mehran Jr.",title:"President/CEO",email:"(verify)"}], projects:[{name:"Bishop Ranch 404-unit",units:404,status:"Rezoning approved"},{name:"Belmont Senior Living",units:185,status:"Delivering 2025"},{name:"AvalonBay 456 homes",units:456,status:"Planned"}] },
+  { id:9, name:"ROEM Development", type:"Private", market:"Bay Area", icp:88, tier:1, urgency:"near_term", enrichment:"execs_found", units:88, signal:"Pursuing 3rd party MF construction. Vertically integrated.", route:"B", contacts:[{name:"Mark Borsuk",title:"CEO/President",email:"(verify)"}], projects:[{name:"Oak Grove Apartments",units:134,status:"Completed"},{name:"San Ramon Valley Blvd",units:0,status:"Completed Jun 2025"}] },
+  { id:10, name:"Trumark Homes", type:"Private", market:"Bay Area, Central Valley", icp:88, tier:1, urgency:"near_term", enrichment:"contacts_verified", units:104, signal:"589 homes in CV pipeline. $400M credit facility. Active SJ permits.", route:"B", contacts:[], projects:[{name:"Oak Place Visalia",units:300,status:"Sales opening Q1 2026"},{name:"Skysill Lemoore",units:289,status:"Sales opening Spring 2026"}] },
+  { id:11, name:"Hines", type:"Public", market:"Bay Area", icp:86, tier:1, urgency:"pipeline", enrichment:"execs_found", units:0, signal:"Multiple Bay Area MF acquisitions. Forecasts recovery 2025-2026.", route:"B", contacts:[{name:"Alfonso Munk",title:"CIO Americas",email:"(verify)"}], projects:[{name:"Daly City BART MF",units:0,status:"Acquired, financing secured"},{name:"Diridon West",units:0,status:"Acquired via HGIT"}] },
+  { id:12, name:"Tishman Speyer", type:"Public", market:"Bay Area", icp:86, tier:1, urgency:"pipeline", enrichment:"execs_found", units:0, signal:"Mission Rock 28-acre waterfront. 850 Turk affordable w/ MidPen.", route:"B", contacts:[], projects:[{name:"Mission Rock",units:0,status:"Multi-phase"},{name:"850 Turk",units:0,status:"Construction Jan 2025-Sept 2026"}] },
+  { id:13, name:"Ensemble Investments", type:"Private", market:"Bay Area", icp:86, tier:1, urgency:"near_term", enrichment:"execs_found", units:0, signal:"200-unit tower Santa Clara. Hospitality crossover.", route:"B", contacts:[], projects:[{name:"Tasman East",units:200,status:"Planning Commission approved"}] },
+  { id:14, name:"AvalonBay Communities", type:"Public", market:"Bay Area", icp:86, tier:1, urgency:"near_term", enrichment:"execs_found", units:457, signal:"456 homes at Bishop Ranch. $20M NorCal SIP commitment.", alert:true, route:"B", contacts:[], projects:[{name:"Bishop Ranch",units:456,status:"Planned"},{name:"NorCal SIP",units:0,status:"$20M committed"}] },
+  { id:15, name:"Dinerstein Companies", type:"Private", market:"SoCal", icp:86, tier:1, urgency:"pipeline", enrichment:"execs_found", units:0, signal:"Atlas Fullerton 329 units. Expanding in California.", route:"B", contacts:[], projects:[{name:"Atlas Fullerton",units:329,status:"Development unveiled Oct 2025"}] },
+  { id:16, name:"Kimco Realty / Westlake", type:"Public", market:"Bay Area", icp:86, tier:1, urgency:"pipeline", enrichment:"execs_found", units:0, signal:"Chester at Westlake 214 units, Daly City. Broke ground Sept 2025.", route:"B", contacts:[], projects:[{name:"The Chester at Westlake",units:214,status:"Under construction, opening 2027"}] },
+  { id:17, name:"Cresleigh Homes", type:"Private", market:"Sacramento", icp:86, tier:1, urgency:"near_term", enrichment:"identified", units:489, signal:"Urban transit-oriented strategy. Capitol Park project.", alert:true, route:"A", contacts:[], projects:[{name:"Capitol Park",units:0,status:"Active"}] },
+  { id:18, name:"SummerHill Housing Group", type:"Private", market:"Bay Area", icp:86, tier:1, urgency:"immediate", enrichment:"identified", units:302, signal:"Hundreds of homes N San Jose, financing lined up. $150M+ Los Gatos.", alert:true, route:"B", contacts:[], projects:[{name:"North San Jose",units:0,status:"Financing lined up"},{name:"Los Gatos redevelopment",units:0,status:"$150M+, started"}] },
+  { id:19, name:"Community HousingWorks", type:"Nonprofit", market:"San Diego", icp:82, tier:1, urgency:"near_term", enrichment:"intel_complete", units:125, signal:"Third Avenue 80 units, $4M city loan. SD focus.", route:"B", contacts:[{name:"Sean Spear",title:"VP RE Development",email:"sspear@chworks.org"},{name:"Mary Jane Jagodzinski",title:"CEO",email:"(verify)"}], projects:[{name:"Third Avenue",units:80,status:"Construction pending"}] },
+  { id:20, name:"540 San Pablo Ave LLC", type:"LLC", market:"East Bay", icp:58, tier:1, urgency:"pipeline", enrichment:"identified", units:207, signal:"Albany mixed-use, former bowling alley. Developer unidentified.", alert:true, route:"B", contacts:[], projects:[{name:"540 San Pablo Ave",units:207,status:"Planning since 2021"}] },
+  { id:21, name:"Emily & Hong Chen", type:"Individual", market:"Sacramento", icp:50, tier:1, urgency:"pipeline", enrichment:"identified", units:81, signal:"No public information found.", alert:true, route:"A", contacts:[], projects:[] },
+  { id:22, name:"Skid Row Housing Trust", type:"Nonprofit", market:"Los Angeles", icp:30, tier:1, urgency:"none", enrichment:"identified", units:0, signal:"COLLAPSED 2023. Portfolio sold Aug 2024. DO NOT CONTACT.", alert:true, route:"B", contacts:[], projects:[] },
+];
+
+const MARKETING_FUNNEL = [
+  { stage:"Signals Captured", count:47, pct:100, color:"var(--blue)", accounts:["SJ Open Data (45 permits)","CEQAnet (2 filings)"] },
+  { stage:"Entity Resolved", count:41, pct:87, color:"var(--accent2)", accounts:["13 net-new developers","28 matched to existing"] },
+  { stage:"Enriched (Stage 3+)", count:28, pct:60, color:"var(--purple)", accounts:["28 with verified contacts"] },
+  { stage:"ICP Qualified (Tier 1-2)", count:19, pct:40, color:"var(--green)", accounts:["22 Tier 1","47 Tier 2"] },
+  { stage:"Marketing Engaged", count:78, pct:20, color:"var(--orange)", accounts:["78 contacts in sequences","22% open rate"] },
+];
+
+const SALES_STAGES = [
+  { name:"Lead Qualified", count:5, deals:["Community HousingWorks","DM Development","Trumark Homes","Eden Housing","ROEM Development"] },
+  { name:"Feasibility", count:3, deals:["Mutual Housing CA","Mercy Housing","Sobrato Org"] },
+  { name:"Scope Gap Analysis", count:2, deals:["Pittsfield / Mill Town","Devon Sacramento"] },
+  { name:"Proposal / MSA", count:1, deals:["Pine Brook (Weston, MA)"] },
+  { name:"MSA Execution", count:1, deals:["Hayward Project"] },
+  { name:"MAP Development", count:1, deals:["Sheehan, NH"] },
+];
+
+const OPS_PROJECTS = [
+  { name:"Pittsfield / Mill Town", status:"Scope Gap Analysis", health:"green", permits:"Pending", factory:"Aligned", scopeGaps:0 },
+  { name:"Devon Sacramento", status:"Scope Gap Analysis", health:"yellow", permits:"In Review", factory:"Needs Alignment", scopeGaps:2 },
+  { name:"Pine Brook (Weston, MA)", status:"Proposal", health:"green", permits:"Pre-app", factory:"TBD", scopeGaps:0 },
+  { name:"Hayward, CA", status:"MSA Execution", health:"green", permits:"Submitted", factory:"Selected", scopeGaps:1 },
+  { name:"Sheehan, NH", status:"MAP Development", health:"yellow", permits:"Approved", factory:"Aligned", scopeGaps:3 },
+  { name:"Lin-McLean ADU", status:"Implementation", health:"green", permits:"Approved", factory:"Delivering", scopeGaps:0 },
+  { name:"APEX", status:"Implementation", health:"yellow", permits:"Partial", factory:"Aligned", scopeGaps:1 },
+];
+
+const TICKETS = [
+  { priority:"p0", title:"Mutual Housing CA — CONFIRMED MODULAR ADOPTER", desc:"Highest priority lead. Robert should outreach first.", assignee:"Robert", due:"Today" },
+  { priority:"p0", title:"Mercy Housing — Conference warm intro", desc:"Tucker attending event where Mercy confirmed. Face-to-face.", assignee:"Tucker", due:"This week" },
+  { priority:"p1", title:"AvalonBay — Email enrichment needed", desc:"No contact email. 456 homes at Bishop Ranch planned.", assignee:"Scott", due:"Today" },
+  { priority:"p1", title:"SummerHill — Email enrichment needed", desc:"Hundreds of homes N San Jose. No email in data.", assignee:"Scott", due:"Today" },
+  { priority:"p1", title:"Cresleigh Homes — Email enrichment needed", desc:"489 units, Sacramento. No contact email.", assignee:"Scott", due:"Today" },
+  { priority:"p1", title:"540 San Pablo — Developer identification", desc:"LLC principal unknown. CA SoS search needed.", assignee:"Scott", due:"Wednesday" },
+  { priority:"p2", title:"Emily & Hong Chen — Entity research", desc:"Zero public information. Property records search needed.", assignee:"Scott", due:"Wednesday" },
+  { priority:"p2", title:"Skid Row Housing Trust — Remove from Tier 1", desc:"Organization collapsed 2023. Flag as Do Not Contact.", assignee:"Tucker", due:"Wednesday" },
+];
+
+const SIGNALS = [
+  { type:"permit", source:"SJ Open Data", desc:"Pacific West Communities — 944 units across 8 active SJ permits", date:"Feb 23" },
+  { type:"permit", source:"SJ Open Data", desc:"KB Home — Daly City new construction permit filed", date:"Feb 23" },
+  { type:"news", source:"SacBiz Journal", desc:"Mutual Housing CA adopting modular construction", date:"Jun 25 '25" },
+  { type:"news", source:"SF Chronicle", desc:"Sobrato/BAHIF $100M affordable housing fund", date:"Dec 10 '25" },
+  { type:"news", source:"SF Business Journal", desc:"AvalonBay plans 456 homes at Bishop Ranch", date:"Nov 30 '25" },
+  { type:"news", source:"NBC Bay Area", desc:"SummerHill — hundreds of homes coming to N San Jose", date:"May 13 '25" },
+  { type:"permit", source:"SJ Open Data", desc:"Trumark Homes — N Capitol Ave townhome permit", date:"Feb 23" },
+  { type:"news", source:"Connect CRE", desc:"Dinerstein — Atlas Fullerton 329 units unveiled", date:"Oct 8 '25" },
+  { type:"news", source:"Bozzuto PR", desc:"Kimco/Bozzuto — Chester at Westlake groundbreaking", date:"Sep 3 '25" },
+  { type:"news", source:"InsideSFRE", desc:"Tishman Speyer/MidPen — 850 Turk $56.84M construction", date:"Oct 15 '25" },
+  { type:"permit", source:"SJ Open Data", desc:"ROEM Development — new MF permit San Jose", date:"Feb 23" },
+  { type:"news", source:"Multifamily Exec", desc:"Shea Homes Bay Area luxury MF after 5-year approval", date:"May 28 '25" },
+  { type:"news", source:"The Real Deal", desc:"Hines secures low loan rate for Daly City MF", date:"Feb 19 '25" },
+];
+
+// ═══════════════════════════════════════════
+// Render Functions
+// ═══════════════════════════════════════════
+
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  event.currentTarget.classList.add('active');
+  
+  if(page==='sales') renderSalesKanban();
+  if(page==='accounts') renderAccountList('all');
+  if(page==='signals') renderSignalFeed();
+  if(page==='tickets') renderTicketsFull();
+  if(page==='ops') renderOps();
+  if(page==='marketing') renderMarketing();
+}
+
+function renderDashboard() {
+  renderTicketQueue();
+  renderMarketingFunnel();
+  renderSalesFunnelDash();
+  renderOpsFunnelDash();
+}
+
+function renderTicketQueue() {
+  const el = document.getElementById('ticketQueue');
+  el.innerHTML = TICKETS.slice(0,5).map(t => `
+    <div class="ticket">
+      <div class="ticket-priority ${t.priority}"></div>
+      <div class="ticket-body">
+        <div class="ticket-title">${t.title}</div>
+        <div class="ticket-meta">${t.desc}</div>
+      </div>
+      <div class="ticket-assignee">${t.assignee}</div>
+      <div style="font-size:12px;color:var(--text2)">${t.due}</div>
+    </div>
+  `).join('');
+}
+
+function renderMarketingFunnel() {
+  const el = document.getElementById('marketingFunnel');
+  el.innerHTML = MARKETING_FUNNEL.map(s => `
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-name">${s.stage}</span>
+        <span class="stage-count">${s.count}</span>
+      </div>
+      <div class="stage-bar"><div class="stage-fill" style="width:${s.pct}%;background:${s.color}"></div></div>
+    </div>
+  `).join('');
+}
+
+function renderSalesFunnelDash() {
+  const el = document.getElementById('salesFunnel');
+  el.innerHTML = SALES_STAGES.map(s => `
+    <div class="stage" onclick="showPage('sales');document.querySelector('.nav-item:nth-child(4)').click();">
+      <div class="stage-header">
+        <span class="stage-name">${s.name}</span>
+        <span class="stage-count">${s.count}</span>
+      </div>
+      <div class="account-pills">
+        ${s.deals.map(d => `<span class="pill tier1" onclick="event.stopPropagation();openAccount('${d}')">${d}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderOpsFunnelDash() {
+  const el = document.getElementById('opsFunnel');
+  el.innerHTML = OPS_PROJECTS.map(p => `
+    <div class="stage">
+      <div class="stage-header">
+        <span class="stage-name">${p.name}</span>
+        <span style="font-size:12px;color:${p.health==='green'?'var(--green)':'var(--yellow)'}">● ${p.status}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">
+        Permits: ${p.permits} · Factory: ${p.factory} · Scope Gaps: ${p.scopeGaps}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderSalesKanban() {
+  const el = document.getElementById('salesContent');
+  el.innerHTML = '<div class="kanban">' + SALES_STAGES.map(s => `
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <span>${s.name}</span>
+        <span class="kanban-col-count">${s.count}</span>
+      </div>
+      <div class="kanban-col-body">
+        ${s.deals.map(d => {
+          const acct = TIER1_ACCOUNTS.find(a=>a.name===d)||{icp:'—',urgency:'—'};
+          return `<div class="kanban-card" onclick="openAccount('${d}')">
+            <div class="kanban-card-name">${d}<span class="kanban-card-score">${acct.icp||''}</span></div>
+            <div class="kanban-card-meta">${acct.market||''} · ${acct.urgency||''}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('') + '</div>';
+}
+
+function showSalesView(view, tab) {
+  document.querySelectorAll('#page-sales .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  if(view==='kanban') renderSalesKanban();
+  else if(view==='list') renderSalesList();
+  else renderVelocity();
+}
+
+function renderSalesList() {
+  const el = document.getElementById('salesContent');
+  let html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">';
+  html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);font-weight:600;">'+
+    '<div>Account</div><div>Stage</div><div>ICP</div><div>Urgency</div><div>Market</div></div>';
+  SALES_STAGES.forEach(s => {
+    s.deals.forEach(d => {
+      const a = TIER1_ACCOUNTS.find(x=>x.name===d)||{icp:'—',urgency:'—',market:'—'};
+      html += `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;" onclick="openAccount('${d}')">
+        <div style="font-weight:600">${d}</div>
+        <div style="color:var(--text2)">${s.name}</div>
+        <div><span style="color:var(--accent2);font-weight:700">${a.icp}</span></div>
+        <div style="color:var(--text2)">${a.urgency}</div>
+        <div style="color:var(--text2)">${a.market}</div>
+      </div>`;
+    });
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderVelocity() {
+  const el = document.getElementById('salesContent');
+  el.innerHTML = `
+    <div class="metrics">
+      <div class="metric-card"><div class="metric-label">Signals → Entity</div><div class="metric-value green">87%</div><div class="metric-sub">41/47 resolved this week</div></div>
+      <div class="metric-card"><div class="metric-label">Entity → Qualified</div><div class="metric-value accent">46%</div><div class="metric-sub">19/41 ICP qualified</div></div>
+      <div class="metric-card"><div class="metric-label">Qualified → Engaged</div><div class="metric-value blue">78</div><div class="metric-sub">contacts in sequence</div></div>
+      <div class="metric-card"><div class="metric-label">Engaged → Meeting</div><div class="metric-value">3</div><div class="metric-sub">meetings this week (22% rate)</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:16px;">Weekly Pipeline Velocity</div>
+      <div style="font-family:monospace;font-size:13px;line-height:1.8;color:var(--text);">
+<span style="color:var(--text2)">Funnel:</span>
+  Signals captured:     <span style="color:var(--accent2);font-weight:700">47</span> <span style="color:var(--green)">(+12 vs last week)</span>
+  Entities resolved:    <span style="color:var(--accent2);font-weight:700">41</span>
+  Enriched (Stage 3+):  <span style="color:var(--accent2);font-weight:700">28</span>
+  ICP Qualified:        <span style="color:var(--accent2);font-weight:700">19</span>
+  Sequenced:            <span style="color:var(--accent2);font-weight:700">78</span>
+  Engaged:              <span style="color:var(--accent2);font-weight:700">17</span> (22% rate)
+  Meetings booked:      <span style="color:var(--green);font-weight:700">3</span>
+
+<span style="color:var(--text2)">Movement:</span>
+  → Lead Qualified: Community HousingWorks, DM Development
+  → Feasibility: Mutual Housing CA (CONFIRMED MODULAR ADOPTER)
+  → Scope Gap: Trumark Homes (call Thursday)
+  <span style="color:var(--yellow)">⚠ No movement: 540 San Pablo (developer unidentified)</span>
+      </div>
+    </div>`;
+}
+
+function renderAccountList(filter) {
+  const el = document.getElementById('accountList');
+  let accounts = TIER1_ACCOUNTS;
+  if(filter==='tier1') accounts = accounts.filter(a=>a.tier===1 && a.icp>=75);
+  if(filter==='tier2') accounts = accounts.filter(a=>a.icp>=50 && a.icp<75);
+  if(filter==='new') accounts = accounts.filter(a=>a.signal && a.signal.includes('Feb 23'));
+  
+  let html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">';
+  accounts.sort((a,b)=>b.icp-a.icp).forEach(a => {
+    const tierColor = a.icp>=85?'var(--accent2)':a.icp>=70?'var(--blue)':a.icp>=50?'var(--yellow)':'var(--text2)';
+    html += `<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;" 
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''" onclick="openAccount('${a.name}')">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;">${a.name} ${a.hot?'<span style="color:var(--red)">🔥</span>':''} ${a.alert?'<span style="color:var(--yellow)">⚠️</span>':''}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${a.type} · ${a.market} · ${a.units} units</div>
+      </div>
+      <div style="text-align:center;min-width:60px">
+        <div style="font-size:16px;font-weight:700;color:${tierColor}">${a.icp}</div>
+        <div style="font-size:10px;color:var(--text2)">ICP</div>
+      </div>
+      <div style="min-width:100px;text-align:right">
+        <span class="tag ${a.urgency==='immediate'?'hot':a.urgency==='near_term'?'tier1':'green'}" style="font-size:11px">${a.urgency.replace('_',' ')}</span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function filterAccounts(filter, tab) {
+  document.querySelectorAll('#page-accounts .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  renderAccountList(filter);
+}
+
+function renderSignalFeed() {
+  const el = document.getElementById('signalFeed');
+  el.innerHTML = SIGNALS.map(s => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;">
+      <span class="signal-type">${s.type}</span>
+      <span style="font-size:13px;font-weight:500">${s.desc}</span>
+      <span class="signal-date">${s.date} · ${s.source}</span>
+    </div>
+  `).join('');
+}
+
+function renderTicketsFull() {
+  const el = document.getElementById('ticketFull');
+  el.innerHTML = TICKETS.map(t => `
+    <div class="ticket">
+      <div class="ticket-priority ${t.priority}"></div>
+      <div class="ticket-body">
+        <div class="ticket-title">${t.title}</div>
+        <div class="ticket-meta">${t.desc}</div>
+      </div>
+      <div class="ticket-assignee">${t.assignee}</div>
+      <div style="font-size:12px;color:var(--text2)">${t.due}</div>
+    </div>
+  `).join('');
+}
+
+function renderOps() {
+  const el = document.getElementById('opsContent');
+  el.innerHTML = OPS_PROJECTS.map(p => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:15px;font-weight:700">${p.name}</span>
+        <span style="font-size:12px;color:${p.health==='green'?'var(--green)':'var(--yellow)'}">● ${p.health==='green'?'On Track':'At Risk'}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;font-size:13px;">
+        <div><span style="color:var(--text2)">Stage:</span> ${p.status}</div>
+        <div><span style="color:var(--text2)">Permits:</span> ${p.permits}</div>
+        <div><span style="color:var(--text2)">Factory:</span> ${p.factory}</div>
+        <div><span style="color:var(--text2)">Scope Gaps:</span> <span style="color:${p.scopeGaps>0?'var(--yellow)':'var(--green)'}; font-weight:700">${p.scopeGaps}</span></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderMarketing() {
+  // Signal sources
+  const sources = [
+    {name:"SJ Open Data API", signals:45, status:"Active", freq:"Daily", lastRun:"Feb 23, 6:00 AM"},
+    {name:"Sacramento Accela", signals:0, status:"Pending", freq:"Weekly", lastRun:"Not yet"},
+    {name:"CEQAnet", signals:2, status:"Active", freq:"Weekly", lastRun:"Feb 22"},
+    {name:"Urbanize SF", signals:3, status:"Active", freq:"Daily", lastRun:"Feb 23"},
+    {name:"SacBiz Journal", signals:1, status:"Active", freq:"Weekly", lastRun:"Feb 21"},
+    {name:"LinkedIn", signals:0, status:"Manual", freq:"Per event", lastRun:"—"},
+  ];
+  document.getElementById('signalSources').innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 2fr;padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);font-weight:600;">
+      <div>Source</div><div>Signals</div><div>Status</div><div>Frequency</div><div>Last Run</div>
+    </div>
+    ${sources.map(s=>`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 2fr;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;">
+      <div style="font-weight:600">${s.name}</div>
+      <div style="color:var(--accent2);font-weight:700">${s.signals}</div>
+      <div><span style="color:${s.status==='Active'?'var(--green)':s.status==='Pending'?'var(--yellow)':'var(--text2)'}">● ${s.status}</span></div>
+      <div style="color:var(--text2)">${s.freq}</div>
+      <div style="color:var(--text2)">${s.lastRun}</div>
+    </div>`).join('')}
+  </div>`;
+
+  // Enrichment pipeline
+  const stages = [
+    {name:"Stage 1: Identified", count:341, desc:"Company in database"},
+    {name:"Stage 2: Execs Found", count:142, desc:"2+ executives identified"},
+    {name:"Stage 3: Contacts Verified", count:38, desc:"Verified email for 1+ contact"},
+    {name:"Stage 4: Intel Complete", count:22, desc:"Full research brief ready"},
+  ];
+  document.getElementById('enrichmentPipeline').innerHTML = stages.map(s=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:16px;">
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${s.name}</div><div style="font-size:12px;color:var(--text2)">${s.desc}</div></div>
+      <div style="font-size:20px;font-weight:700;color:var(--accent2)">${s.count}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// Account Detail Panel
+// ═══════════════════════════════════════════
+
+function openAccount(name) {
+  const acct = TIER1_ACCOUNTS.find(a=>a.name===name);
+  if(!acct) { closeDetail(); return; }
+  
+  document.getElementById('detailName').textContent = acct.name;
+  document.getElementById('detailType').textContent = `${acct.type} · ${acct.market} · Route ${acct.route}`;
+  
+  const tierColor = acct.icp>=85?'tier1':acct.icp>=70?'tier2':'';
+  const urgColor = acct.urgency==='immediate'?'hot':acct.urgency==='near_term'?'yellow':'green';
+  document.getElementById('detailTags').innerHTML = `
+    <span class="tag ${tierColor}">Tier ${acct.tier} · ICP ${acct.icp}</span>
+    <span class="tag ${urgColor}">${acct.urgency.replace('_',' ')}</span>
+    <span class="tag green">${acct.enrichment.replace('_',' ')}</span>
+    ${acct.hot?'<span class="tag hot">🔥 HOT</span>':''}
+    ${acct.alert?'<span class="tag yellow">⚠️ Needs Attention</span>':''}
+  `;
+
+  let body = '';
+  
+  // Signal
+  if(acct.signal) {
+    body += `<div class="detail-section">
+      <div class="detail-section-title">Key Signal</div>
+      <div style="font-size:13px;padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid ${acct.hot?'var(--red)':'var(--accent)'}">${acct.signal}</div>
+    </div>`;
+  }
+
+  // ICP Score
+  body += `<div class="detail-section">
+    <div class="detail-section-title">ICP Score</div>
+    <div class="score-bar">
+      <div class="score-track"><div class="score-fill" style="width:${acct.icp}%;background:${acct.icp>=85?'var(--accent2)':acct.icp>=70?'var(--blue)':'var(--yellow)'}"></div></div>
+      <div class="score-num" style="color:${acct.icp>=85?'var(--accent2)':acct.icp>=70?'var(--blue)':'var(--yellow)'}">${acct.icp}</div>
+    </div>
+  </div>`;
+
+  // Overview
+  body += `<div class="detail-section">
+    <div class="detail-section-title">Overview</div>
+    <div class="detail-row"><span class="label">Units</span><span class="value">${acct.units||'—'}</span></div>
+    <div class="detail-row"><span class="label">Route</span><span class="value">Route ${acct.route} (${acct.route==='A'?'1-10 units':'10-150+ units'})</span></div>
+    <div class="detail-row"><span class="label">Enrichment</span><span class="value">${acct.enrichment.replace(/_/g,' ')}</span></div>
+    <div class="detail-row"><span class="label">Urgency</span><span class="value">${acct.urgency.replace(/_/g,' ')}</span></div>
+  </div>`;
+
+  // Contacts
+  if(acct.contacts.length>0) {
+    body += `<div class="detail-section">
+      <div class="detail-section-title">Key Contacts</div>
+      <div class="detail-contacts">
+        ${acct.contacts.map(c=>`<div class="contact-card">
+          <div class="contact-name">${c.name}</div>
+          <div class="contact-title">${c.title}</div>
+          ${c.email?`<div class="contact-email">${c.email}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  } else {
+    body += `<div class="detail-section">
+      <div class="detail-section-title">Key Contacts</div>
+      <div style="font-size:13px;color:var(--yellow);padding:8px 0">⚠️ No contacts identified — enrichment needed</div>
+    </div>`;
+  }
+
+  // Projects
+  if(acct.projects.length>0) {
+    body += `<div class="detail-section">
+      <div class="detail-section-title">Active Projects</div>
+      ${acct.projects.map(p=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <div style="font-weight:600">${p.name} ${p.units?'('+p.units+' units)':''}</div>
+        <div style="color:var(--text2)">${p.status}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // Actions
+  body += `<div class="actions">
+    <button class="btn primary" onclick="alert('Brief generated for '+${JSON.stringify(acct.name)})">Generate Brief</button>
+    <button class="btn" onclick="alert('Enrichment triggered for '+${JSON.stringify(acct.name)})">Enrich</button>
+    <button class="btn" onclick="alert('Score recalculated for '+${JSON.stringify(acct.name)})">Rescore</button>
+  </div>`;
+
+  document.getElementById('detailBody').innerHTML = body;
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════
+// REDA Terminal
+// ═══════════════════════════════════════════
+
+function runCommand(cmd) {
+  const input = document.getElementById('termInput');
+  const body = document.getElementById('terminalBody');
+  input.value = '';
+  
+  body.innerHTML += `<div class="cmd-output"><div class="cmd-line">/reda ${cmd}</div>`;
+  
+  const parts = cmd.trim().toLowerCase().split(/\s+/);
+  const action = parts[0];
+  const arg = parts.slice(1).join(' ');
+  
+  let output = '';
+  
+  switch(action) {
+    case 'help':
+      output = `<span class="cmd-dim">Available commands:</span>
+  pipeline      — Show pipeline overview
+  tier1         — List Tier 1 accounts
+  brief &lt;name&gt;  — Show account brief
+  score &lt;name&gt;  — Show ICP score breakdown
+  signals       — Recent signals
+  queue         — Your ticket queue
+  search &lt;q&gt;    — Search accounts
+  status        — System status
+  velocity      — Pipeline velocity report`;
+      break;
+      
+    case 'pipeline':
+      output = `<span style="color:var(--accent2);font-weight:700">REDA Pipeline — ${new Date().toLocaleDateString()}</span>
+
+  Lead Qualified:     5 deals
+  Feasibility:        3 deals
+  Scope Gap Analysis: 2 deals
+  Proposal / MSA:     1 deal
+  MSA Execution:      1 deal
+  MAP Development:    1 deal
+  ─────────────────────────
+  Total active:       <span style="color:var(--green);font-weight:700">13 deals</span>`;
+      break;
+      
+    case 'tier1':
+      output = TIER1_ACCOUNTS.filter(a=>a.icp>=75).sort((a,b)=>b.icp-a.icp).map(a=>
+        `  <span style="color:var(--accent2)">${String(a.icp).padStart(3)}</span>  ${a.name.padEnd(30)} ${a.market.padEnd(20)} ${a.urgency}`
+      ).join('\n');
+      output = `<span style="color:var(--accent2);font-weight:700">Tier 1 Accounts (ICP ≥ 75)</span>\n\n  <span class="cmd-dim">ICP  Account                        Market               Urgency</span>\n  <span class="cmd-dim">───  ─────────────────────────────  ──────────────────   ────────</span>\n` + output;
+      break;
+      
+    case 'status':
+      output = `<span style="color:var(--green)">●</span> REDA V2 — All Systems Operational
+
+  Marketing Engine:  <span style="color:var(--green)">●</span> Active — 47 signals / 41 resolved
+  Sales Engine:      <span style="color:var(--green)">●</span> Active — 13 deals in pipeline
+  Operations Engine: <span style="color:var(--green)">●</span> Active — 7 projects tracked
+  Signal Crons:      <span style="color:var(--green)">●</span> 3 active (daily, weekly, monthly)
+  HubSpot:           <span style="color:var(--yellow)">●</span> Pending (awaiting API token)
+  Grain:             <span style="color:var(--yellow)">●</span> Pending (awaiting webhook)`;
+      break;
+      
+    case 'signals':
+      output = SIGNALS.slice(0,8).map(s=>
+        `  <span style="color:var(--blue)">[${s.type.padEnd(6)}]</span> ${s.desc.substring(0,60).padEnd(60)} <span class="cmd-dim">${s.date}</span>`
+      ).join('\n');
+      output = `<span style="color:var(--accent2);font-weight:700">Recent Signals</span>\n\n` + output;
+      break;
+      
+    case 'brief':
+    case 'score':
+      const match = TIER1_ACCOUNTS.find(a=>a.name.toLowerCase().includes(arg));
+      if(match) {
+        if(action==='brief') {
+          output = `<span style="color:var(--accent2);font-weight:700">Account Brief — ${match.name}</span>
+
+  Type:        ${match.type}
+  Market:      ${match.market}
+  ICP Score:   <span style="color:var(--accent2);font-weight:700">${match.icp}/100</span> (Tier ${match.tier})
+  Urgency:     ${match.urgency.replace('_',' ')}
+  Enrichment:  ${match.enrichment.replace(/_/g,' ')}
+  Units:       ${match.units}
+  Route:       ${match.route}
+
+  <span style="color:var(--green);font-weight:700">Signal:</span> ${match.signal}
+
+  Contacts: ${match.contacts.length>0?match.contacts.map(c=>c.name+' ('+c.title+')').join(', '):'⚠️ None — enrichment needed'}
+  Projects: ${match.projects.length>0?match.projects.map(p=>p.name+' — '+p.status).join(', '):'None tracked'}`;
+        } else {
+          output = `<span style="color:var(--accent2);font-weight:700">ICP Score — ${match.name}: ${match.icp}/100</span>
+
+  Score breakdown not yet implemented in terminal.
+  Use the dashboard account panel for full ICP breakdown.`;
+        }
+      } else {
+        output = `<span style="color:var(--red)">Account not found: "${arg}"</span>\nTry: /reda tier1 to see available accounts`;
+      }
+      break;
+      
+    case 'search':
+      const results = TIER1_ACCOUNTS.filter(a=>a.name.toLowerCase().includes(arg)||a.market.toLowerCase().includes(arg));
+      output = results.length>0 
+        ? results.map(a=>`  <span style="color:var(--accent2)">${a.icp}</span> ${a.name} — ${a.market} — ${a.urgency.replace('_',' ')}`).join('\n')
+        : `<span style="color:var(--yellow)">No results for "${arg}"</span>`;
+      break;
+
+    case 'queue':
+      output = TICKETS.map(t=>`  <span style="color:${t.priority==='p0'?'var(--red)':t.priority==='p1'?'var(--orange)':'var(--yellow)'}">■</span> [${t.assignee.padEnd(7)}] ${t.title} — <span class="cmd-dim">${t.due}</span>`).join('\n');
+      output = `<span style="color:var(--accent2);font-weight:700">Action Queue</span>\n\n` + output;
+      break;
+
+    case 'velocity':
+      output = `<span style="color:var(--accent2);font-weight:700">Pipeline Velocity — Week of Feb 17-23</span>
+
+  Signals captured:     <span style="color:var(--accent2);font-weight:700">47</span> <span style="color:var(--green)">(+12 vs last week)</span>
+  Entities resolved:    41
+  Enriched (Stage 3+):  28
+  ICP Qualified:        19
+  Sequenced:            78
+  Engaged:              17 (22% rate)
+  Meetings booked:      <span style="color:var(--green);font-weight:700">3</span>`;
+      break;
+      
+    default:
+      output = `<span style="color:var(--yellow)">Unknown command: "${action}"</span>\nType /reda help for available commands`;
+  }
+  
+  body.innerHTML += `<div class="cmd-result">${output}</div></div>`;
+  body.scrollTop = body.scrollHeight;
+}
+
+// ═══════════════════════════════════════════
+// Search
+// ═══════════════════════════════════════════
+
+function handleSearch(q) {
+  if(q.length < 2) return;
+  const match = TIER1_ACCOUNTS.find(a=>a.name.toLowerCase().includes(q.toLowerCase()));
+  if(match) openAccount(match.name);
+}
+
+// ═══════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', renderDashboard);
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeDetail(); });
+</script>
+</body>
+</html>
